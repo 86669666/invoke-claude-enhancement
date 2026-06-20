@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install black pylint mypy
+      - name: Run black
+        run: |
+          if [ -d "src/python" ] && [ -n "$(find src/python -name '*.py')" ]; then
+            black --check src/python
+          else
+            echo "No Python files to lint yet"
+          fi
+      - name: Run pylint
+        run: |
+          if [ -d "src/python" ] && [ -n "$(find src/python -name '*.py')" ]; then
+            pylint src/python --disable=C0114,C0115,C0116 || true
+          else
+            echo "No Python files to lint yet"
+          fi
+
+  test-python:
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('src/python/**/*.py') != '' }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-asyncio pytest-cov
+          if [ -f "src/python/requirements.txt" ]; then
+            pip install -r src/python/requirements.txt
+          fi
+      - name: Run tests
+        run: |
+          if [ -d "tests" ]; then
+            pytest tests/ --cov=src/python --cov-report=term-missing
+          else
+            echo "No tests yet"
+          fi
+
+  lint-go:
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('src/go/**/*.go') != '' }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          working-directory: src/go
+
+  lint-rust:
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('src/rust/**/*.rs') != '' }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Run rustfmt
+        run: |
+          cd src/rust
+          cargo fmt --check
+      - name: Run clippy
+        run: |
+          cd src/rust
+          cargo clippy -- -D warnings
+
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check documentation
+        run: |
+          echo "Checking required docs exist..."
+          test -f README.md
+          test -f docs/design/architecture.md
+          echo "✅ Documentation check passed"
