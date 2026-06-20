@@ -42,14 +42,17 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install pytest pytest-asyncio pytest-cov
+          pip install pytest pytest-asyncio pytest-cov pytest-mock
           if [ -f "src/python/requirements.txt" ]; then
             pip install -r src/python/requirements.txt
+          fi
+          if [ -f "src/python/requirements-dev.txt" ]; then
+            pip install -r src/python/requirements-dev.txt
           fi
       - name: Run tests
         run: |
           if [ -d "tests" ]; then
-            pytest tests/ --cov=src/python --cov-report=term-missing
+            PYTHONPATH=src/python:$PYTHONPATH pytest tests/ --cov=src/python --cov-report=term-missing
           else
             echo "No tests yet"
           fi
