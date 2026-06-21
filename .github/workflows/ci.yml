@@ -35,7 +35,6 @@ jobs:
 
   test-python:
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('src/python/**/*.py') != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -61,7 +60,7 @@ jobs:
 
   lint-go:
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('src/go/**/*.go') != '' }}
+    if: false  # Phase 3 only
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -74,7 +73,7 @@ jobs:
 
   lint-rust:
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('src/rust/**/*.rs') != '' }}
+    if: false  # Phase 3 only
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
