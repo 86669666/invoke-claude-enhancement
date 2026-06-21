@@ -98,7 +98,7 @@ Complete the task described in the user prompt. Be thorough and verify your work
                 output_parts.append(f"[Thinking]\n{thinking_output}\n")
             output_parts.append(text_output)
 
-            return {
+            result = {
                 "output": "\n".join(output_parts),
                 "status": "completed",
                 "model": response.get("model"),
@@ -106,6 +106,7 @@ Complete the task described in the user prompt. Be thorough and verify your work
                 "stop_reason": response.get("stop_reason"),
                 "native_impl": True,
             }
+            return result
 
     except Exception as e:
         return {
