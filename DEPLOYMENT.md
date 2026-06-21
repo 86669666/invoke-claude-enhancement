@@ -9,8 +9,8 @@
 ## 部署概览
 
 **原生实现优势**：
-- 性能提升 95-98%（消除 Node.js 冷启动 200-500ms 开销）
-- 内存降低 60-70%（30-50MB → 10-15MB）
+- **实测性能提升**：延迟改进 +15.8%（Node.js 4.98s → 原生 4.19s），内存降低 60-70%（30-50MB → 10-15MB）
+  - _注_：Phase 1 预测值为「性能提升 95-98%」，实测改进主要在内存占用和冷启动消除；总延迟受网络/模型响应时间主导
 - 原生支持 Anthropic Extended Thinking
 
 **集成方式**：
@@ -28,6 +28,12 @@
    - Python 3.9-3.10 需安装 `tomli` 包
 3. **网络访问**：能访问 won LiteLLM proxy（内网/公网/localhost 之一）
 4. **Git**：用于克隆 repo
+5. **Claude Code CLI（fallback 路径用）**：
+   - **安装检测**：`which claude && claude --version`
+   - **登录状态检测**：`claude auth status` → `loggedIn: true/false`
+   - **未安装时**：原生路径仍可用，但 fallback 哑火（不阻断部署，仅影响容错）
+   - **nologin（未登录）时**：fallback 静默失败，建议登录：`claude auth login`
+   - _注_：原生实现（`INVOKE_CLAUDE_NATIVE=1`）走 LiteLLM 不依赖 CLI；CLI 仅在原生路径失败时 fallback
 
 ---
 
