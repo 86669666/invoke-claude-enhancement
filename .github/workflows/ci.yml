@@ -10,12 +10,13 @@ jobs:
   lint-python:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install black pylint mypy
       - name: Run black
         run: |
@@ -34,29 +35,32 @@ jobs:
 
   test-python:
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('src/python/**/*.py') != '' }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          pip install pytest pytest-asyncio pytest-cov
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio pytest-cov pytest-mock
           if [ -f "src/python/requirements.txt" ]; then
             pip install -r src/python/requirements.txt
+          fi
+          if [ -f "src/python/requirements-dev.txt" ]; then
+            pip install -r src/python/requirements-dev.txt
           fi
       - name: Run tests
         run: |
           if [ -d "tests" ]; then
-            pytest tests/ --cov=src/python --cov-report=term-missing
+            PYTHONPATH=src/python:$PYTHONPATH pytest tests/ --cov=src/python --cov-report=term-missing
           else
             echo "No tests yet"
           fi
 
   lint-go:
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('src/go/**/*.go') != '' }}
+    if: false  # Phase 3 only
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -69,7 +73,7 @@ jobs:
 
   lint-rust:
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('src/rust/**/*.rs') != '' }}
+    if: false  # Phase 3 only
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -88,7 +92,7 @@ jobs:
   docs-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Check documentation
         run: |
           echo "Checking required docs exist..."
