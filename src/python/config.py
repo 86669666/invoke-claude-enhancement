@@ -115,7 +115,9 @@ class ConfigLoader:
         else:
             return obj
 
-    def _merge_config(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    def _merge_config(
+        self, base: Dict[str, Any], override: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Deep merge two config dicts.
 
@@ -129,7 +131,11 @@ class ConfigLoader:
         result = self._deep_copy(base)
 
         for key, value in override.items():
-            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            if (
+                key in result
+                and isinstance(result[key], dict)
+                and isinstance(value, dict)
+            ):
                 result[key] = self._merge_config(result[key], value)
             else:
                 result[key] = self._deep_copy(value)
@@ -157,7 +163,11 @@ class ConfigLoader:
             "CLAUDE_MAX_RETRIES": ("claude", "max_retries", int),
             "CLAUDE_PROXY_URL": ("proxy", "url"),
             "CLAUDE_PROXY_TOPOLOGY": ("proxy", "topology"),
-            "CLAUDE_RETRY_ENABLED": ("retry", "enabled", lambda v: v.lower() in ("true", "1", "yes")),
+            "CLAUDE_RETRY_ENABLED": (
+                "retry",
+                "enabled",
+                lambda v: v.lower() in ("true", "1", "yes"),
+            ),
             "CLAUDE_RETRY_MAX_ATTEMPTS": ("retry", "max_attempts", int),
         }
 
