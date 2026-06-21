@@ -97,8 +97,34 @@ echo "Hermes venv: $HERMES_VENV"
 echo "Repo 路径:   $REPO_PATH"
 echo ""
 
+# ================== 步骤 0: Claude Code CLI 预检（非阻断） ==================
+echo "[0/6] Claude Code CLI 预检（fallback 路径用）..."
+
+if command -v claude &>/dev/null; then
+    CLAUDE_VERSION=$(claude --version 2>&1 || echo "unknown")
+    echo "  ✓ Claude Code CLI 已安装: $CLAUDE_VERSION"
+    
+    # 检测登录状态
+    AUTH_STATUS=$(claude auth status 2>&1 || echo "{}")
+    if echo "$AUTH_STATUS" | grep -q '"loggedIn": true'; then
+        echo "  ✓ 登录状态: 已登录 ✅"
+    elif echo "$AUTH_STATUS" | grep -q '"loggedIn": false'; then
+        echo "  ⚠ 登录状态: nologin（未登录）"
+        echo "    → fallback 路径将静默失败（不影响原生路径）"
+        echo "    → 建议登录: claude auth login"
+    else
+        echo "  ⚠ 无法检测登录状态（输出: ${AUTH_STATUS:0:50}...）"
+    fi
+else
+    echo "  ⚠ Claude Code CLI 未安装"
+    echo "    → 原生路径（INVOKE_CLAUDE_NATIVE=1）不受影响"
+    echo "    → fallback 路径将哑火（不阻断部署）"
+    echo "    → 建议安装: https://code.claude.com/docs/en/cli-reference"
+fi
+echo ""
+
 # ================== 步骤 1: 安装依赖 ==================
-echo "[1/5] 安装 Python 依赖..."
+echo "[1/6] 安装 Python 依赖..."
 "$HERMES_VENV/bin/pip" install -q httpx tenacity structlog
 
 # 检查 Python 版本，3.11 以下需要 tomli
@@ -112,13 +138,13 @@ fi
 
 # ================== 步骤 2: 克隆/更新 repo ==================
 if [[ -d "$REPO_PATH/.git" ]]; then
-    echo "[2/5] 更新现有 repo..."
+    echo "[2/6] 更新现有 repo..."
     cd "$REPO_PATH"
     git fetch origin
     git checkout main
     git reset --hard origin/main
 else
-    echo "[2/5] 克隆 repo..."
+    echo "[2/6] 克隆 repo..."
     mkdir -p "$(dirname "$REPO_PATH")"
     git clone https://github.com/86669666/invoke-claude-enhancement.git "$REPO_PATH"
     cd "$REPO_PATH"
@@ -129,7 +155,7 @@ CURRENT_COMMIT=$(git rev-parse --short HEAD)
 echo "  当前 commit: $CURRENT_COMMIT"
 
 # ================== 步骤 3: 定位并备份 claude_worker_lib.py ==================
-echo "[3/5] 定位 claude_worker_lib.py..."
+echo "[3/6] 定位 claude_worker_lib.py..."
 CLAUDE_WORKER_LIB=$(detect_claude_worker_lib "$HERMES_VENV")
 
 if [[ ! -f "$CLAUDE_WORKER_LIB.bak" ]]; then
@@ -140,7 +166,7 @@ else
 fi
 
 # ================== 步骤 4: 注入 bridge 集成代码 ==================
-echo "[4/5] 注入 bridge 集成代码..."
+echo "[4/6] 注入 bridge 集成代码..."
 
 # 检查是否已注入（幂等性）
 if grep -q "\[INTEGRATION\] Check if native Python implementation" "$CLAUDE_WORKER_LIB"; then
@@ -210,9 +236,20 @@ PYEOF
 fi
 
 # ================== 步骤 5: 清理 .pyc 缓存 ==================
-echo "[5/5] 清理 Python 缓存..."
+echo "[5/6] 清理 Python 缓存..."
 find "$HERMES_VENV" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 find "$HERMES_VENV" -type f -name "*.pyc" -delete 2>/dev/null || true
+
+# ================== 步骤 6: 最终验证建议 ==================
+echo "[6/6] 部署完成，建议验证..."
+echo ""
+echo "  建议验证步骤："
+echo "  1. 原生路径测试（通过 LiteLLM）："
+echo "     $HERMES_VENV/bin/python -c 'import os; os.environ[\"INVOKE_CLAUDE_NATIVE\"]=\"1\"; from tools.claude_worker_lib import invoke_claude; print(invoke_claude(prompt=\"9+9=\", workdir=\"/tmp\", model=\"Klite\", timeout=30))'"
+echo ""
+echo "  2. Fallback 路径测试（通过 Node.js Claude Code CLI）："
+echo "     $HERMES_VENV/bin/python -c 'from tools.claude_worker_lib import invoke_claude; print(invoke_claude(prompt=\"9+9=\", workdir=\"/tmp\", model=\"Klite\", timeout=30))'"
+echo ""
 
 echo ""
 echo "=========================================="
