@@ -22,7 +22,7 @@ class TestAnthropicClient:
         
         assert client.api_key == "test-key-123"
         assert client.base_url in ["http://10.10.10.111:4100", "http://127.0.0.1:4100", "https://llm.bai.one"]
-        assert client.model == "claude-opus-4"
+        assert client.model == "claude-sonnet-5"
         assert client.timeout == 900
     
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key-123"})
@@ -91,7 +91,7 @@ class TestAnthropicClient:
         call_args = mock_post.call_args
         payload = call_args.kwargs["json"]
         assert payload["messages"][0]["content"] == "Hi there"
-        assert payload["model"] == "claude-opus-4"
+        assert payload["model"] == "claude-sonnet-5"
     
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-key-123"})
     @patch("httpx.Client.post")

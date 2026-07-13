@@ -23,7 +23,7 @@ class TestConfigLoader:
         loader = ConfigLoader()
         config = loader.load()
 
-        assert config["claude"]["default_model"] == "claude-opus-4"
+        assert config["claude"]["default_model"] == "claude-sonnet-5"
         assert config["claude"]["default_timeout"] == 900
         assert config["proxy"]["url"] in ConfigLoader.TOPOLOGY_BASE_URLS.values()
         assert config["retry"]["enabled"] is True
@@ -82,7 +82,7 @@ default_timeout = 300
         loader = ConfigLoader(project_dir=str(tmp_path))
         config = loader.load()
 
-        # Model from TOML, timeout from env
+        # Model from TOML (overrides default), timeout from env (overrides TOML)
         assert config["claude"]["default_model"] == "claude-opus-4"
         assert config["claude"]["default_timeout"] == 600
 
@@ -116,6 +116,6 @@ default_timeout = 300
         """Test get() convenience method."""
         loader = ConfigLoader()
 
-        assert loader.get("claude", "default_model") == "claude-opus-4"
+        assert loader.get("claude", "default_model") == "claude-sonnet-5"
         assert loader.get("proxy", "nonexistent", "fallback") == "fallback"
         assert loader.get("nonexistent_section", "key", 42) == 42

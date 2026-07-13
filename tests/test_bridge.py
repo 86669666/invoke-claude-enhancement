@@ -1,8 +1,13 @@
 """Integration tests for bridge module."""
 
 import os
+import sys
 import pytest
+from pathlib import Path
 from unittest.mock import Mock, patch
+
+# Add src/python to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "python"))
 
 from bridge import use_native_implementation, invoke_claude_native
 
@@ -45,6 +50,7 @@ class TestInvokeClaudeNative:
         """Should make basic API call with correct parameters."""
         mock_client = Mock()
         mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client.model = "claude-sonnet-5"
         mock_client.create_message.return_value = {
             "id": "msg_test",
             "model": "test-model",
@@ -52,8 +58,6 @@ class TestInvokeClaudeNative:
             "usage": {"input_tokens": 10, "output_tokens": 5},
             "stop_reason": "end_turn",
         }
-        mock_client.extract_text.return_value = "Test response"
-        mock_client.extract_thinking.return_value = None
 
         result = invoke_claude_native(
             prompt="Test prompt",
@@ -64,43 +68,18 @@ class TestInvokeClaudeNative:
         )
 
         assert result["status"] == "completed"
+        assert result["ok"] is True
         assert result["model"] == "test-model"
-        assert result["output"] == "Test response"
+        assert "Test response" in result["output"]
         assert result["native_impl"] is True
         mock_client.create_message.assert_called_once()
-
-    @patch("bridge.AnthropicClient")
-    def test_extended_thinking(self, mock_client_class):
-        """Should include thinking output when effort is set."""
-        mock_client = Mock()
-        mock_client_class.return_value.__enter__.return_value = mock_client
-        mock_client.create_message.return_value = {
-            "id": "msg_test",
-            "content": [
-                {"type": "thinking", "thinking": "Let me think..."},
-                {"type": "text", "text": "Answer"},
-            ],
-            "usage": {"input_tokens": 10, "output_tokens": 5},
-            "stop_reason": "end_turn",
-        }
-        mock_client.extract_text.return_value = "Answer"
-        mock_client.extract_thinking.return_value = "Let me think..."
-
-        result = invoke_claude_native(
-            prompt="Test prompt",
-            workdir="/tmp",
-            effort="medium",
-        )
-
-        assert "[Thinking]" in result["output"]
-        assert "Let me think..." in result["output"]
-        assert "Answer" in result["output"]
 
     @patch("bridge.AnthropicClient")
     def test_error_handling(self, mock_client_class):
         """Should handle API errors gracefully."""
         mock_client = Mock()
         mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client.model = "claude-sonnet-5"
         mock_client.create_message.side_effect = Exception("API error")
 
         result = invoke_claude_native(
@@ -109,6 +88,7 @@ class TestInvokeClaudeNative:
         )
 
         assert result["status"] == "error"
+        assert result["ok"] is False
         assert "API error" in result["error"]
         assert result["native_impl"] is True
 

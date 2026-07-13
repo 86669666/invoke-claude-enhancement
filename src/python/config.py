@@ -24,7 +24,7 @@ class ConfigLoader:
     DEFAULT_CONFIG = {
         "claude": {
             "bin_path": "/root/.hermes/node/bin/claude",
-            "default_model": "claude-opus-4",
+            "default_model": "claude-sonnet-5",
             "default_timeout": 900,
             "max_retries": 3,
         },

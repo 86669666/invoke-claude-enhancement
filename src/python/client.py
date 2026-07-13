@@ -85,26 +85,30 @@ class AnthropicClient:
     @with_retry(max_attempts=5, initial_delay=2.0, max_delay=60.0)
     def create_message(
         self,
-        prompt: str,
+        prompt: Optional[str] = None,
         *,
+        messages: Optional[List[Dict[str, Any]]] = None,
         model: Optional[str] = None,
         max_tokens: int = 16000,
         temperature: float = 1.0,
         system: Optional[str] = None,
         extended_thinking: bool = False,
         thinking_budget_tokens: Optional[int] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Create a message using Anthropic Messages API.
 
         Args:
-            prompt: User prompt
+            prompt: User prompt (simple mode, creates single user message)
+            messages: Full conversation messages (advanced mode for multi-turn)
             model: Model to use (defaults to instance default)
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             system: System prompt
             extended_thinking: Enable extended thinking (reasoning)
             thinking_budget_tokens: Token budget for thinking (requires extended_thinking)
+            tools: List of tool definitions for tool use
 
         Returns:
             API response dict with 'content', 'usage', etc.
@@ -112,13 +116,25 @@ class AnthropicClient:
         Raises:
             httpx.HTTPError: On API errors
         """
+        if prompt is None and messages is None:
+            raise ValueError("Either 'prompt' or 'messages' must be provided")
+
+        if prompt is not None and messages is not None:
+            raise ValueError("Cannot provide both 'prompt' and 'messages'")
+
         model = model or self.model
+
+        # Build messages array
+        if messages is not None:
+            msg_array = messages
+        else:
+            msg_array = [{"role": "user", "content": prompt}]
 
         payload: Dict[str, Any] = {
             "model": model,
             "max_tokens": max_tokens,
             "temperature": temperature,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": msg_array,
         }
 
         if system:
@@ -130,12 +146,17 @@ class AnthropicClient:
                 "budget_tokens": thinking_budget_tokens or 10000,
             }
 
+        if tools:
+            payload["tools"] = tools
+
         logger.info(
             "api_request",
             model=model,
-            prompt_length=len(prompt),
+            prompt_length=len(prompt) if prompt else 0,
+            num_messages=len(msg_array),
             max_tokens=max_tokens,
             extended_thinking=extended_thinking,
+            tools=len(tools) if tools else 0,
         )
 
         try:
