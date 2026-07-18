@@ -39,6 +39,13 @@ class TestAnthropicClient:
         assert client.base_url == "http://custom:8080"
         assert client.model == "claude-sonnet-4"
         assert client.timeout == 600
+
+    @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "env-test-key"})
+    def test_client_explicit_empty_api_key_does_not_rediscover_env(self):
+        """Explicit api_key values must bypass environment rediscovery."""
+        client = AnthropicClient(api_key="")
+
+        assert client.api_key == ""
     
     def test_client_no_api_key_raises(self):
         """Test that missing API key raises error."""

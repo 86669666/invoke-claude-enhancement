@@ -31,7 +31,7 @@
 
 **Phase 2.5: Hermes 工具集成 + 舰队推广** ✅ 已完成
 
-- [x] `claude_worker_lib.py` 注入 bridge 逻辑（PR #2, commit `35a882a`）
+- [x] 原生 bridge 安装脚本（稳定运行目录 + 不改写 worker）
 - [x] FSPVE 舰队推广（招财/旺财/奶茶/可乐）— 已部署 ✅
 - [x] 标准化部署文档 + 自动化脚本（PR #3, commit `a877f18`）
 - HMPVE 舰队待推广 ⏳
@@ -41,21 +41,22 @@
 
 - Go/Rust 实现按需启动（仅在 Python 版本仍有瓶颈时考虑）
 
-## 环境变量
+## 配置
 
-### 启用原生实现
-
-```bash
-export INVOKE_CLAUDE_NATIVE=1  # 启用 Python 原生实现
-```
-
-### 配置参数（可选）
+### Child-Only 配置文件（推荐）
 
 ```bash
-export ANTHROPIC_API_KEY=sk-...        # Anthropic API key（推荐走 won LiteLLM）
-export ANTHROPIC_BASE_URL=http://...   # 自定义 base_url（默认自动探测）
-export INVOKE_CLAUDE_TIMEOUT=900       # 超时秒数（默认 900）
-export INVOKE_CLAUDE_MODEL=Klite       # 默认模型（推荐 won LiteLLM 模型名）
+export HERMES_HOME=/usr/local/lib/hermes-agent
+install -m 0600 /dev/null "$HERMES_HOME/claude-plugin.env"
+
+# 父 profile 的 .env:
+# INVOKE_CLAUDE_NATIVE=1
+#
+# 写入 child-only 配置，避免把 Claude 凭据暴露到父进程环境
+# 该文件仅包含：
+# CLAUDE_API_KEY=sk-...
+# CLAUDE_PROXY_URL=http://...
+# CLAUDE_MODEL=Klite
 ```
 
 ## 舰队推广状态
@@ -82,7 +83,7 @@ cd /opt/workspace/git
 git clone git@github.com:86669666/invoke-claude-enhancement.git
 cd invoke-claude-enhancement
 
-# 运行自动化部署脚本（三层自动探测 + 幂等）
+# 运行自动化部署脚本（三层自动探测 + 幂等；仅安装原生 bridge 文件）
 bash scripts/deploy-invoke-claude-native.sh
 ```
 
@@ -91,20 +92,9 @@ bash scripts/deploy-invoke-claude-native.sh
 ### 2. 验证部署
 
 ```bash
-# 测试原生路径
-/usr/local/lib/hermes-agent/venv/bin/python -c '
-import os
-os.environ["INVOKE_CLAUDE_NATIVE"] = "1"
-from tools.claude_worker_lib import invoke_claude
-result = invoke_claude(prompt="9+9=", workdir="/tmp", model="Klite", timeout=30)
-print(f"Status: {result[\"status\"]}, Native: {\"native_impl\" in result}")
-'
-
-# 测试 fallback（未设 INVOKE_CLAUDE_NATIVE）
 /usr/local/lib/hermes-agent/venv/bin/python -c '
 from tools.claude_worker_lib import invoke_claude
-result = invoke_claude(prompt="9+9=", workdir="/tmp", model="Klite", timeout=30)
-print(f"Status: {result[\"status\"]}, Fallback: {\"native_impl\" not in result}")
+print(callable(invoke_claude))
 '
 ```
 

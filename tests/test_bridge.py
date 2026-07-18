@@ -73,6 +73,40 @@ class TestInvokeClaudeNative:
         assert "Test response" in result["output"]
         assert result["native_impl"] is True
         mock_client.create_message.assert_called_once()
+        mock_client_class.assert_called_once_with(
+            api_key=None,
+            base_url="http://test:4100",
+            model="test-model",
+            timeout=30,
+        )
+
+    @patch("bridge.AnthropicClient")
+    def test_api_key_passed_to_client(self, mock_client_class):
+        """Should pass explicit api_key through to AnthropicClient."""
+        mock_client = Mock()
+        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client.model = "claude-sonnet-5"
+        mock_client.create_message.return_value = {
+            "id": "msg_test",
+            "model": "test-model",
+            "content": [{"type": "text", "text": "Test response"}],
+            "usage": {"input_tokens": 10, "output_tokens": 5},
+            "stop_reason": "end_turn",
+        }
+
+        result = invoke_claude_native(
+            prompt="Test prompt",
+            workdir="/tmp",
+            api_key="explicit-test-key",
+        )
+
+        assert result["status"] == "completed"
+        mock_client_class.assert_called_once_with(
+            api_key="explicit-test-key",
+            base_url=None,
+            model=None,
+            timeout=900,
+        )
 
     @patch("bridge.AnthropicClient")
     def test_error_handling(self, mock_client_class):

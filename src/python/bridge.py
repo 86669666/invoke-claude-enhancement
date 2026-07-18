@@ -33,6 +33,7 @@ def invoke_claude_native(
     prompt: str,
     workdir: str,
     *,
+    api_key: Optional[str] = None,
     model: Optional[str] = None,
     timeout: int = 900,
     proxy_url: Optional[str] = None,
@@ -49,6 +50,7 @@ def invoke_claude_native(
     Args:
         prompt: Task instruction for Claude
         workdir: Working directory for file operations
+        api_key: Anthropic API key override
         model: Claude model name (default: claude-sonnet-5)
         timeout: Overall timeout in seconds
         proxy_url: LiteLLM proxy URL (default: http://10.10.10.111:4100)
@@ -111,6 +113,7 @@ Complete the task described by the user. Be thorough and verify your work."""
         }
 
         with AnthropicClient(
+            api_key=api_key,
             base_url=proxy_url,
             model=model,
             timeout=timeout,

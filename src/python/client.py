@@ -40,7 +40,7 @@ class AnthropicClient:
         self.config_loader = config_loader or ConfigLoader()
         config = self.config_loader.load()
 
-        self.api_key = api_key or self._get_api_key()
+        self.api_key = api_key if api_key is not None else self._get_api_key()
         self.base_url = (base_url or config["proxy"]["url"]).rstrip("/")
         self.model = model or config["claude"]["default_model"]
         self.timeout = timeout or config["claude"]["default_timeout"]
