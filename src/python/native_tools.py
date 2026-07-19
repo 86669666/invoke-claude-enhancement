@@ -17,16 +17,19 @@ except ImportError:
 
 class ToolError(Exception):
     """Base exception for tool errors."""
+
     pass
 
 
 class PathTraversalError(ToolError):
     """Raised when path escapes workdir."""
+
     pass
 
 
 class ToolNotAllowedError(ToolError):
     """Raised when tool is not in allowed_tools or is in disallowed_tools."""
+
     pass
 
 
@@ -80,9 +83,7 @@ class WorkdirValidator:
         try:
             resolved.relative_to(self.workdir)
         except ValueError:
-            raise PathTraversalError(
-                f"Path '{path}' escapes workdir '{self.workdir}'"
-            )
+            raise PathTraversalError(f"Path '{path}' escapes workdir '{self.workdir}'")
 
         return resolved
 
@@ -128,7 +129,9 @@ class ToolExecutor:
 
         return True
 
-    def execute_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
+    def execute_tool(
+        self, tool_name: str, tool_input: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Execute a tool with given input.
 
@@ -277,20 +280,38 @@ class ToolExecutor:
             # Build bubblewrap command for strict sandboxing
             bwrap_args = [
                 "bwrap",
-                "--ro-bind", "/usr", "/usr",  # Read-only system binaries
-                "--ro-bind", "/lib", "/lib",  # Read-only libraries
-                "--ro-bind", "/lib64", "/lib64",  # Read-only 64-bit libraries
-                "--ro-bind", "/bin", "/bin",  # Read-only binaries
-                "--ro-bind", "/sbin", "/sbin",  # Read-only system binaries
-                "--proc", "/proc",  # Proc filesystem
-                "--dev", "/dev",  # Device filesystem (minimal)
-                "--tmpfs", "/tmp",  # Ephemeral tmp
-                "--bind", str(self.workdir), str(self.workdir),  # Workdir read-write
-                "--chdir", str(self.workdir),  # Start in workdir
+                "--ro-bind",
+                "/usr",
+                "/usr",  # Read-only system binaries
+                "--ro-bind",
+                "/lib",
+                "/lib",  # Read-only libraries
+                "--ro-bind",
+                "/lib64",
+                "/lib64",  # Read-only 64-bit libraries
+                "--ro-bind",
+                "/bin",
+                "/bin",  # Read-only binaries
+                "--ro-bind",
+                "/sbin",
+                "/sbin",  # Read-only system binaries
+                "--proc",
+                "/proc",  # Proc filesystem
+                "--dev",
+                "/dev",  # Device filesystem (minimal)
+                "--tmpfs",
+                "/tmp",  # Ephemeral tmp
+                "--bind",
+                str(self.workdir),
+                str(self.workdir),  # Workdir read-write
+                "--chdir",
+                str(self.workdir),  # Start in workdir
                 "--unshare-all",  # Unshare all namespaces
                 "--die-with-parent",  # Kill sandbox when parent dies
                 "--new-session",  # New process session for clean termination
-                "/bin/bash", "-c", command,
+                "/bin/bash",
+                "-c",
+                command,
             ]
 
             # Execute with timeout and process group kill
@@ -306,9 +327,9 @@ class ToolExecutor:
 
             # Truncate output if too large
             if len(stdout) > self.output_size_limit:
-                stdout = stdout[:self.output_size_limit] + "\n... (truncated)"
+                stdout = stdout[: self.output_size_limit] + "\n... (truncated)"
             if len(stderr) > self.output_size_limit:
-                stderr = stderr[:self.output_size_limit] + "\n... (truncated)"
+                stderr = stderr[: self.output_size_limit] + "\n... (truncated)"
 
             return {
                 "exit_code": proc.returncode,
@@ -319,6 +340,7 @@ class ToolExecutor:
             # Kill the entire sandbox process group, including grandchildren.
             if proc is not None:
                 import signal
+
                 try:
                     os.killpg(proc.pid, signal.SIGKILL)
                 except ProcessLookupError:

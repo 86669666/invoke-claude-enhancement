@@ -7,12 +7,24 @@ from typing import Any, Dict, List, Optional
 # Import native Python implementation (support both package and flat mode)
 try:
     from client import AnthropicClient
-    from native_tools import ToolExecutor, get_tool_definitions, ToolNotAllowedError, PathTraversalError
+    from native_tools import (
+        ToolExecutor,
+        get_tool_definitions,
+        ToolNotAllowedError,
+        PathTraversalError,
+    )
+
     NATIVE_IMPL_AVAILABLE = True
 except ImportError:
     try:
         from .client import AnthropicClient
-        from .native_tools import ToolExecutor, get_tool_definitions, ToolNotAllowedError, PathTraversalError
+        from .native_tools import (
+            ToolExecutor,
+            get_tool_definitions,
+            ToolNotAllowedError,
+            PathTraversalError,
+        )
+
         NATIVE_IMPL_AVAILABLE = True
     except ImportError:
         NATIVE_IMPL_AVAILABLE = False
@@ -83,8 +95,7 @@ def invoke_claude_native(
         # Get filtered tool definitions
         all_tools = get_tool_definitions()
         available_tools = [
-            tool for tool in all_tools
-            if tool_executor.is_tool_allowed(tool["name"])
+            tool for tool in all_tools if tool_executor.is_tool_allowed(tool["name"])
         ]
 
         # Build system prompt
@@ -142,7 +153,9 @@ Complete the task described by the user. Be thorough and verify your work."""
                         system=system_prompt,
                         max_tokens=64_000,
                         extended_thinking=extended_thinking,
-                        thinking_budget_tokens=(thinking_budget if extended_thinking else None),
+                        thinking_budget_tokens=(
+                            thinking_budget if extended_thinking else None
+                        ),
                         tools=available_tools if available_tools else None,
                     )
                 except Exception as api_error:
@@ -201,27 +214,35 @@ Complete the task described by the user. Be thorough and verify your work."""
                             tool_use_id = content_block.get("id")
 
                             try:
-                                result = tool_executor.execute_tool(tool_name, tool_input)
-                                tool_results.append({
-                                    "type": "tool_result",
-                                    "tool_use_id": tool_use_id,
-                                    "content": str(result),
-                                })
+                                result = tool_executor.execute_tool(
+                                    tool_name, tool_input
+                                )
+                                tool_results.append(
+                                    {
+                                        "type": "tool_result",
+                                        "tool_use_id": tool_use_id,
+                                        "content": str(result),
+                                    }
+                                )
                             except Exception as e:
                                 # Catch all tool errors and return as tool_result error
-                                tool_results.append({
-                                    "type": "tool_result",
-                                    "tool_use_id": tool_use_id,
-                                    "content": f"Error: {e}",
-                                    "is_error": True,
-                                })
+                                tool_results.append(
+                                    {
+                                        "type": "tool_result",
+                                        "tool_use_id": tool_use_id,
+                                        "content": f"Error: {e}",
+                                        "is_error": True,
+                                    }
+                                )
 
                     # Add tool results as user message
                     if tool_results:
-                        messages.append({
-                            "role": "user",
-                            "content": tool_results,
-                        })
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": tool_results,
+                            }
+                        )
                     else:
                         # No tools executed, break to avoid infinite loop
                         break
@@ -240,7 +261,11 @@ Complete the task described by the user. Be thorough and verify your work."""
                 "ok": False,
                 "output": _format_conversation_output(messages),
                 "status": "max_turns_reached",
-                "model": response.get("model") if 'response' in locals() else (model or client.model),
+                "model": (
+                    response.get("model")
+                    if "response" in locals()
+                    else (model or client.model)
+                ),
                 "usage": total_usage,
                 "stop_reason": "max_turns",
                 "native_impl": True,

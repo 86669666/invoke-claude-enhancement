@@ -1,18 +1,28 @@
 """Tests for ConfigLoader."""
 
 import os
-import tempfile
+import sys
 from pathlib import Path
 
 import pytest
-
-import sys
-from pathlib import Path
 
 # Add src/python to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "python"))
 
 from config import ConfigLoader
+
+
+@pytest.fixture(autouse=True)
+def isolate_config_loader_env(monkeypatch, tmp_path):
+    """Keep config loader tests hermetic against host env and global/project config."""
+    for env_name in tuple(os.environ):
+        if env_name.startswith(("CLAUDE_", "ANTHROPIC_")):
+            monkeypatch.delenv(env_name, raising=False)
+
+    home_dir = tmp_path / "home"
+    home_dir.mkdir()
+    monkeypatch.setenv("HOME", str(home_dir))
+    monkeypatch.chdir(tmp_path)
 
 
 class TestConfigLoader:

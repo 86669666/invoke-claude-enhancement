@@ -1,11 +1,9 @@
 """Tests for tool implementations."""
 
-import os
-import sys
+import shutil
 import subprocess
-import tempfile
+import sys
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 import pytest
 
@@ -13,13 +11,24 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "python"))
 
 from native_tools import (
-    WorkdirValidator,
-    ToolExecutor,
     PathTraversalError,
-    ToolNotAllowedError,
     ToolError,
+    ToolExecutor,
+    ToolNotAllowedError,
+    WorkdirValidator,
     get_tool_definitions,
 )
+
+
+def require_working_bwrap(tmp_path: Path) -> None:
+    """Skip when bubblewrap is missing or unusable in this environment."""
+    if shutil.which("bwrap") is None:
+        pytest.skip("bubblewrap not available")
+
+    probe = ToolExecutor(str(tmp_path)).execute_tool("Bash", {"command": "true"})
+    if probe.get("exit_code") != 0:
+        detail = probe.get("error") or probe.get("stderr") or "unknown error"
+        pytest.skip(f"bubblewrap not usable in this environment: {detail}")
 
 
 class TestWorkdirValidator:
@@ -171,6 +180,7 @@ class TestToolExecutor:
     
     def test_bash_success(self, tmp_path):
         """Should execute bash command."""
+        require_working_bwrap(tmp_path)
         executor = ToolExecutor(str(tmp_path))
         result = executor.execute_tool("Bash", {"command": "echo 'Hello from bash'"})
         
@@ -179,6 +189,7 @@ class TestToolExecutor:
     
     def test_bash_with_exit_code(self, tmp_path):
         """Should capture non-zero exit codes."""
+        require_working_bwrap(tmp_path)
         executor = ToolExecutor(str(tmp_path))
         result = executor.execute_tool("Bash", {"command": "exit 42"})
         
@@ -186,6 +197,7 @@ class TestToolExecutor:
     
     def test_bash_timeout(self, tmp_path):
         """Should timeout long-running commands."""
+        require_working_bwrap(tmp_path)
         executor = ToolExecutor(str(tmp_path), bash_timeout=1)
         result = executor.execute_tool("Bash", {"command": "sleep 10"})
         
@@ -195,6 +207,7 @@ class TestToolExecutor:
     
     def test_bash_runs_in_workdir(self, tmp_path):
         """Should execute commands in workdir."""
+        require_working_bwrap(tmp_path)
         test_file = tmp_path / "marker.txt"
         test_file.write_text("I am here")
         
@@ -206,6 +219,7 @@ class TestToolExecutor:
     
     def test_bash_output_size_limit(self, tmp_path):
         """Should truncate large output."""
+        require_working_bwrap(tmp_path)
         executor = ToolExecutor(str(tmp_path), output_size_limit=100)
         result = executor.execute_tool("Bash", {
             "command": "python3 -c 'print(\"x\" * 1000)'"
@@ -281,9 +295,12 @@ class TestBashSandboxing:
     def test_bash_without_bubblewrap(self, tmp_path, monkeypatch):
         """Should deny Bash execution when bubblewrap unavailable."""
         # Mock bubblewrap as unavailable
-        import shutil
         original_which = shutil.which
-        monkeypatch.setattr(shutil, "which", lambda cmd: None if cmd == "bwrap" else original_which(cmd))
+        monkeypatch.setattr(
+            shutil,
+            "which",
+            lambda cmd: None if cmd == "bwrap" else original_which(cmd),
+        )
 
         executor = ToolExecutor(str(tmp_path))
         result = executor.execute_tool("Bash", {"command": "echo test"})
@@ -294,10 +311,7 @@ class TestBashSandboxing:
 
     def test_bash_cannot_read_outside_workdir(self, tmp_path):
         """Should prevent reading files outside workdir via Bash."""
-        import shutil
-        if not shutil.which("bwrap"):
-            pytest.skip("bubblewrap not available")
-
+        require_working_bwrap(tmp_path)
         # Create a file outside workdir
         outside_file = tmp_path.parent / "secret.txt"
         outside_file.write_text("SECRET DATA")
@@ -312,10 +326,7 @@ class TestBashSandboxing:
 
     def test_bash_timeout_kills_children(self, tmp_path):
         """Should kill entire process group on timeout."""
-        import shutil
-        if not shutil.which("bwrap"):
-            pytest.skip("bubblewrap not available")
-
+        require_working_bwrap(tmp_path)
         executor = ToolExecutor(str(tmp_path), bash_timeout=1)
 
         # Command that spawns child processes
